@@ -1,0 +1,7 @@
+{
+  "id": "threadviewer",
+  "name": "Thread Viewer",
+  "version": "0.1.0",
+  "author": "Carbonadoks",
+  "description": "Open Bluesky posts and profiles in Thread Viewer: read a thread as a blog, a parallel board, or a tree, and browse an author's full repo."
+}

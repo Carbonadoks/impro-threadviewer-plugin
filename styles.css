@@ -1,0 +1,87 @@
+/* Thread Viewer plugin styles. Class names are global, so everything is
+   namespaced with `tv-`. No url()/@import/@font-face (host disallows them). */
+
+.tv-viewer-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 12px;
+  margin: 0 0 8px;
+  border-radius: 12px;
+  background: color-mix(in srgb, currentColor 6%, transparent);
+  font-size: 0.85rem;
+}
+
+.tv-viewer-bar__label {
+  font-weight: 700;
+  opacity: 0.65;
+}
+
+.tv-viewer-bar__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tv-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  background: color-mix(in srgb, currentColor 4%, transparent);
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  line-height: 1.1;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.tv-button:hover {
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  border-color: color-mix(in srgb, currentColor 32%, transparent);
+}
+
+.tv-button--primary {
+  background: #1185fe;
+  border-color: #1185fe;
+  color: #fff;
+}
+
+.tv-button--primary:hover {
+  background: #0070e0;
+  border-color: #0070e0;
+}
+
+.tv-button plugin-icon {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+}
+
+.tv-button plugin-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.tv-modal-text {
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+
+.tv-modal-list {
+  margin: 0 0 16px;
+  padding-left: 18px;
+  line-height: 1.6;
+}
+
+.tv-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
