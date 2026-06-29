@@ -196,8 +196,8 @@ export default class ThreadViewerPlugin extends Plugin {
       new AboutModal(normalizeBaseUrl(this.settings.baseUrl)).open();
     });
 
-    // Post page: a row of viewer links at the top of the thread.
-    this.registerSlot("post-thread-view:top", (context) =>
+    // Post page: a row of viewer links directly below the post.
+    this.registerSlot("post-thread-view:after-main", (context) =>
       this.renderPostViewerBar(context),
     );
 
