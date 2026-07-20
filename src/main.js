@@ -4,6 +4,8 @@ import {
   PluginSettingTab,
   Setting,
   VirtualEl,
+  Notice,
+  fetch as pluginFetch,
 } from "@impro.social/impro-plugin";
 
 // Thread Viewer routes that take a single bsky post URL via ?url=
@@ -26,8 +28,8 @@ const POST_VIEWERS = [
   {
     key: "showTree",
     route: "treeviewer",
-    label: "Tree",
-    title: "View this thread as a tree",
+    label: "Tree panel",
+    title: "Open a tree in a side panel",
     icon: "sitemap-line",
   },
 ];
@@ -43,6 +45,8 @@ const DEFAULT_SETTINGS = {
 };
 
 const AT_POST_RE = /^at:\/\/([^/]+)\/app\.bsky\.feed\.post\/([^/]+)$/;
+const PUBLIC_APPVIEW = "https://public.api.bsky.app";
+const MAX_TREE_NODES = 400;
 
 function normalizeBaseUrl(value) {
   const raw = (value ?? "").trim();
@@ -63,6 +67,54 @@ function postUrlFromContextUri(uri) {
   }
   if (/^https:\/\//i.test(trimmed)) return trimmed;
   return null;
+}
+
+function postHrefFromAtUri(uri) {
+  const match = typeof uri === "string" ? uri.match(AT_POST_RE) : null;
+  return match ? `https://bsky.app/profile/${match[1]}/post/${match[2]}` : null;
+}
+
+function isThreadViewPost(value) {
+  return Boolean(value?.post?.uri && value?.post?.author && value?.post?.record);
+}
+
+function highestAvailableUri(node) {
+  let current = node;
+  while (isThreadViewPost(current?.parent)) current = current.parent;
+  return current?.post?.uri ?? null;
+}
+
+function declaredRootUri(node) {
+  const uri = node?.post?.record?.reply?.root?.uri;
+  return typeof uri === "string" && AT_POST_RE.test(uri) ? uri : null;
+}
+
+async function requestThread(uri, { depth, parentHeight }) {
+  const params = new URLSearchParams({
+    uri,
+    depth: String(depth),
+    parentHeight: String(parentHeight),
+  });
+  const response = await pluginFetch(
+    `${PUBLIC_APPVIEW}/xrpc/app.bsky.feed.getPostThread?${params}`,
+  );
+  if (!response.ok) throw new Error(`Bluesky returned ${response.status}`);
+  const payload = await response.json();
+  if (!isThreadViewPost(payload?.thread)) throw new Error("Thread is unavailable");
+  return payload.thread;
+}
+
+async function fetchRootThread(uri) {
+  const centered = await requestThread(uri, { depth: 0, parentHeight: 100 });
+  const availableUri = highestAvailableUri(centered);
+  const rootUri = declaredRootUri(centered) || availableUri;
+  if (!rootUri) throw new Error("Could not find the conversation root");
+  try {
+    return await requestThread(rootUri, { depth: 1000, parentHeight: 0 });
+  } catch (error) {
+    if (!availableUri || availableUri === rootUri) throw error;
+    return requestThread(availableUri, { depth: 1000, parentHeight: 0 });
+  }
 }
 
 function viewerHref(base, route, params) {
@@ -135,6 +187,80 @@ class AboutModal extends Modal {
     actions
       .createEl("button", { cls: "tv-button", text: "Close" })
       .onClick(() => this.close());
+  }
+
+  onClose() {
+    this.titleEl.empty();
+    this.contentEl.empty();
+  }
+}
+
+class TreePanelModal extends Modal {
+  constructor({ thread, sourceUrl, viewerUrl }) {
+    super();
+    this.thread = thread;
+    this.sourceUrl = sourceUrl;
+    this.viewerUrl = viewerUrl;
+    this.renderedNodes = 0;
+    this.truncated = false;
+  }
+
+  onOpen() {
+    this.titleEl.setText("Thread tree");
+    const panel = this.contentEl.createDiv({ cls: "tv-tree-panel" });
+    const rootList = panel.createEl("ol", { cls: "tv-tree" });
+    this.renderNode(rootList, this.thread);
+
+    if (this.truncated) {
+      panel.createEl("p", {
+        cls: "tv-tree-panel__notice",
+        text: `Showing the first ${MAX_TREE_NODES} posts.`,
+      });
+    }
+
+    const actions = panel.createDiv({ cls: "tv-tree-panel__actions" });
+    actions.createEl("a", {
+      cls: "tv-button",
+      text: "Open full Tree Viewer ↗",
+      attr: { href: this.viewerUrl, title: "Open the full tree-only viewer" },
+    });
+    actions
+      .createEl("button", { cls: "tv-button tv-button--primary", text: "Close" })
+      .onClick(() => this.close());
+  }
+
+  renderNode(list, node) {
+    if (!isThreadViewPost(node) || this.renderedNodes >= MAX_TREE_NODES) {
+      if (isThreadViewPost(node)) this.truncated = true;
+      return;
+    }
+
+    this.renderedNodes += 1;
+    const post = node.post;
+    const author = post.author;
+    const text = typeof post.record?.text === "string" ? post.record.text.trim() : "";
+    const href = postHrefFromAtUri(post.uri) || this.sourceUrl;
+    const item = list.createEl("li", { cls: "tv-tree__item" });
+    const card = item.createDiv({ cls: "tv-tree__card" });
+    card.createSpan({
+      cls: "tv-tree__avatar",
+      text: (author.displayName || author.handle || "?").slice(0, 1).toUpperCase(),
+    });
+    const body = card.createDiv({ cls: "tv-tree__body" });
+    body.createEl("a", {
+      cls: "tv-tree__author",
+      text: author.displayName || `@${author.handle}`,
+      attr: { href, title: `Open @${author.handle}'s post` },
+    });
+    body.createEl("p", {
+      cls: "tv-tree__text",
+      text: text || "Post without text",
+    });
+
+    const replies = Array.isArray(node.replies) ? node.replies.filter(isThreadViewPost) : [];
+    if (replies.length === 0) return;
+    const children = item.createEl("ol", { cls: "tv-tree" });
+    for (const reply of replies) this.renderNode(children, reply);
   }
 
   onClose() {
@@ -226,6 +352,23 @@ export default class ThreadViewerPlugin extends Plugin {
     await this.saveData(this.settings);
   }
 
+  async openTreePanel(postUrl, uri) {
+    const loadingNotice = new Notice("Loading thread tree…");
+    try {
+      const thread = await fetchRootThread(uri);
+      const base = normalizeBaseUrl(this.settings.baseUrl);
+      new TreePanelModal({
+        thread,
+        sourceUrl: postUrl,
+        viewerUrl: viewerHref(base, "treeviewer", { url: postUrl, embed: "tree" }),
+      }).open();
+    } catch (error) {
+      new Notice(error?.message || "Could not load the thread tree", 5000);
+    } finally {
+      loadingNotice.hide();
+    }
+  }
+
   renderPostViewerBar(context) {
     const postUrl = postUrlFromContextUri(context?.uri);
     if (!postUrl) return null;
@@ -239,6 +382,17 @@ export default class ThreadViewerPlugin extends Plugin {
     const group = bar.createDiv({ cls: "tv-viewer-bar__buttons" });
 
     for (const viewer of viewers) {
+      if (viewer.key === "showTree") {
+        const button = group.createEl("button", {
+          cls: "tv-button",
+          attr: { type: "button", title: viewer.title },
+        });
+        button.createIcon((icon) => icon.setIcon(viewer.icon));
+        button.createSpan({ text: viewer.label });
+        button.onClick(() => this.openTreePanel(postUrl, context.uri));
+        continue;
+      }
+
       const link = group.createEl("a", {
         cls: "tv-button",
         attr: {

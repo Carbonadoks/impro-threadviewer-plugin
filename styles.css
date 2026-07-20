@@ -85,3 +85,131 @@
   gap: 10px;
   align-items: center;
 }
+
+dialog.plugin-modal[data-plugin-id="threadviewer"]:has(.tv-tree-panel) {
+  inset: 0 0 0 auto;
+  width: min(520px, 100vw);
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  transform: none;
+  border-radius: 18px 0 0 18px;
+  border-width: 0 0 0 1px;
+}
+
+dialog.plugin-modal[data-plugin-id="threadviewer"]:has(.tv-tree-panel) .modal-dialog-content {
+  box-sizing: border-box;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  overflow: hidden;
+}
+
+.tv-tree-panel {
+  min-height: 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.tv-tree {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tv-tree-panel > .tv-tree {
+  flex: 1;
+  overflow: auto;
+  padding: 4px 8px 24px 2px;
+}
+
+.tv-tree .tv-tree {
+  margin-left: 19px;
+  padding-left: 18px;
+  border-left: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+}
+
+.tv-tree__item {
+  position: relative;
+  margin: 8px 0;
+}
+
+.tv-tree .tv-tree > .tv-tree__item::before {
+  content: "";
+  position: absolute;
+  top: 19px;
+  left: -18px;
+  width: 15px;
+  border-top: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+}
+
+.tv-tree__card {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 9px 10px;
+  border: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, currentColor 4%, transparent);
+}
+
+.tv-tree__avatar {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #1185fe;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.tv-tree__body {
+  min-width: 0;
+}
+
+.tv-tree__author {
+  color: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.tv-tree__text {
+  display: -webkit-box;
+  margin: 3px 0 0;
+  overflow: hidden;
+  color: inherit;
+  opacity: 0.82;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
+
+.tv-tree-panel__notice {
+  margin: 8px 0 0;
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.tv-tree-panel__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 12px;
+}
+
+@media (max-width: 560px) {
+  dialog.plugin-modal[data-plugin-id="threadviewer"]:has(.tv-tree-panel) {
+    width: 100vw;
+    border-radius: 0;
+  }
+}
