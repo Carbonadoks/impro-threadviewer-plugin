@@ -3,50 +3,44 @@
 An [Impro](https://github.com/improsocial/impro) plugin that opens Bluesky posts
 and profiles in [Thread Viewer](https://threadviewer.app).
 
-- **On a post** — a row of actions appears below the thread. **Blog** and
-  **Parallel board** open in Thread Viewer; **Tree panel** opens a native,
-  plugin-only tree drawer inside Impro.
+- **On a post** — a row below the focused post links to **Tree viewer** and
+  **Parallel board** in Thread Viewer.
+- **Anywhere (feeds, search, …)** — the post ⋯ menu gains **Open in Thread
+  Viewer** with the same two links (toggleable).
 - **On a profile** — the profile context menu gains **View repo in Thread
   Viewer**, which opens the author's full repo (every post + self-reply thread).
-- **Sidebar** — a "Thread Viewer" item with a short about panel and a link home.
 
 Built against the sample plugin: https://github.com/improsocial/impro-sample-plugin
+(plugin SDK `@impro.social/impro-plugin` 0.0.24).
 
 ## How it hooks into Impro
 
 | Feature | Integration point | Notes |
 | --- | --- | --- |
-| Post viewer actions | `registerSlot("post-thread-view:after-main", …)` | Host passes `context.uri` = `at://<did>/app.bsky.feed.post/<rkey>`. Links convert it to a `bsky.app` URL; the tree action loads it through the public Bluesky AppView. |
-| View repo | `app.on("profile-context-menu", (menu, profile) => …)` | Opens a modal with a link to the repo route (`?handle=`). Context-menu items can't navigate directly, so the link is surfaced in a modal. |
-| Sidebar item | `addSidebarItem(icon, title, cb)` | Opens an about modal. |
-| Settings | `addSettingTab(new PluginSettingTab())` | Base URL, repo route, and per-viewer toggles. |
+| Post viewer links | `registerSlot("post-thread-view:after-main", …, { cacheKey: ["uri"] })` | Host passes `context.uri` = `at://<did>/app.bsky.feed.post/<rkey>`, converted to a `bsky.app` URL. Cached per URI; `refreshSlot` re-renders after a settings change. |
+| Post menu | `app.on("post-context-menu", (menu, post) => …)` | Opens a modal with the viewer links. |
+| View repo | `app.on("profile-context-menu", (menu, profile) => …)` | Opens a modal with a link to `viewer2?handle=`. |
+| Settings | `addSettingTab(new PluginSettingTab())` | Base URL and per-viewer toggles. |
 
-External actions are rendered as `<a>` elements. The Impro host only renders
-**https** hrefs and forces `target="_blank"`, so the configured base URL must be
-https (an external-link confirmation is shown on click). The native Tree panel
-uses a regular plugin button.
+Context-menu items can't navigate directly, so links are surfaced in a modal.
+Links are rendered as `<a>` elements; the Impro host only renders **https**
+hrefs, forces `target="_blank"`, and shows an external-link confirmation. The
+plugin needs no network permissions.
 
 ## Settings
 
 - **Thread Viewer URL** — base URL of your Thread Viewer instance (default
   `https://threadviewer.app`; must be https).
-- **Repo viewer route** — route used by *View repo* (default `viewer2`).
-- **Show "Blog" / "Parallel board" / "Tree panel"** — toggle each post action.
+- **Show "Tree viewer" / "Parallel board"** — toggle each post link.
+- **Add to post menu** — toggle the ⋯ menu entry.
 
 ## Routes used
 
 | Action | Thread Viewer URL |
 | --- | --- |
-| Blog | `<base>/blog?url=<bsky post url>` |
+| Tree viewer | `<base>/treeviewer?url=<bsky post url>` |
 | Parallel board | `<base>/parallelboard?url=<bsky post url>` |
-| Tree panel | Native Impro drawer; its “Open full Tree Viewer” action uses `<base>/treeviewer?url=<bsky post url>&embed=tree` |
 | View repo | `<base>/viewer2?handle=<handle or did>` |
-
-The side panel stays entirely within the existing plugin API. It fetches the
-public Bluesky thread, finds the conversation root, and renders a compact native
-tree using Impro's permitted virtual elements. No iframe or Impro host changes
-are required. The `embed=tree` route remains available for the panel's full-view
-link.
 
 ## Local development
 
@@ -60,6 +54,8 @@ link.
 4. Rebuild after editing `src/main.js`:
    ```
    npm install      # pulls @impro.social/impro-plugin from the @atpkgs registry (see .npmrc)
+                    # newer npm may refuse its remote tarball; if so, `npm pack` it from
+                    # the @atpkgs registry and extract into node_modules/@impro.social/impro-plugin
    npm run build    # bundles src/main.js -> main.js
    # or: npm start  # watch mode
    ```

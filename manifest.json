@@ -1,10 +1,7 @@
 {
   "id": "threadviewer",
   "name": "Thread Viewer",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "author": "Carbonadoks",
-  "description": "Open Bluesky posts and profiles in Thread Viewer: read a thread as a blog, a parallel board, or a tree, and browse an author's full repo.",
-  "permissions": {
-    "fetch": "https://public.api.bsky.app/xrpc/app.bsky.feed.getPostThread"
-  }
+  "description": "Open Bluesky posts in Thread Viewer's tree viewer or parallel board, and browse an author's full repo from their profile."
 }
